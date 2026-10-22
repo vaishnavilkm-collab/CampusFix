@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusFix - Issue Details</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="report-container">
+
+    <h1>CampusFix</h1>
+    <h2>Issue Details</h2>
+
+    <div id="issue-details">
+        <p>Loading issue details...</p>
+    </div>
+
+    <p>
+        <a href="my-issues.html">Back to My Issues</a>
+    </p>
+
+</div>
+
+<script>
+
+const params = new URLSearchParams(window.location.search);
+const issueId = params.get("issue");
+
+if (issueId) {
+
+    fetch(`/issue/${encodeURIComponent(issueId)}`, {
+        credentials: "include"
+    })
+    .then(response => {
+
+        if (!response.ok) {
+            throw new Error("Unable to load issue details");
+        }
+
+        return response.json();
+
+    })
+    .then(issue => {
+
+        const container = document.getElementById("issue-details");
+
+        container.innerHTML = `
+            <p><strong>Issue Title:</strong> <span id="issue-title"></span></p>
+            <p><strong>Category:</strong> <span id="issue-category"></span></p>
+            <p><strong>Location:</strong> <span id="issue-location"></span></p>
+            <p><strong>Description:</strong> <span id="issue-description"></span></p>
+            <p><strong>Priority:</strong> <span id="issue-priority"></span></p>
+            <p><strong>Status:</strong> <span id="issue-status"></span></p>
+            <p><strong>Reported Date:</strong> <span id="issue-date"></span></p>
+
+            <hr>
+
+            <p><strong>Assigned Staff:</strong> <span id="staff-name"></span></p>
+            <p><strong>Staff Email:</strong> <span id="staff-email"></span></p>
+            <p><strong>Department:</strong> <span id="staff-department"></span></p>
+        `;
+
+        document.getElementById("issue-title").textContent =
+            issue.title || "-";
+
+        document.getElementById("issue-category").textContent =
+            issue.category || "-";
+
+        document.getElementById("issue-location").textContent =
+            issue.location || "-";
+
+        document.getElementById("issue-description").textContent =
+            issue.description || "-";
+
+        document.getElementById("issue-priority").textContent =
+            issue.priority || "-";
+
+        document.getElementById("issue-status").textContent =
+            issue.status || "-";
+
+        document.getElementById("issue-date").textContent =
+            issue.reported_date || "-";
+
+        document.getElementById("staff-name").textContent =
+            issue.staff_name || "Awaiting Staff Assignment";
+
+        document.getElementById("staff-email").textContent =
+            issue.staff_email || "Not assigned yet";
+
+        document.getElementById("staff-department").textContent =
+            issue.staff_department || "Not assigned yet";
+
+    })
+    .catch(error => {
+
+        document.getElementById("issue-details").innerHTML =
+            "<p>Unable to load issue details. Please try again.</p>";
+
+        console.error("Issue details error:", error);
+
+    });
+
+} else {
+
+    document.getElementById("issue-details").innerHTML =
+        "<p>No issue selected. Please select an issue from My Issues.</p>";
+
+}
+
+</script>
+
+</body>
+</html>

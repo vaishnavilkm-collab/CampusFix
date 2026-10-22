@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusFix - Update Status</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="report-container">
+
+    <h1>CampusFix</h1>
+    <h2>Update Issue Status</h2>
+
+    <div id="issue-information">
+
+        <p>
+            <strong>Issue:</strong>
+            <span id="issue-title">Loading...</span>
+        </p>
+
+        <p>
+            <strong>Location:</strong>
+            <span id="issue-location">Loading...</span>
+        </p>
+
+        <p>
+            <strong>Category:</strong>
+            <span id="issue-category">Loading...</span>
+        </p>
+
+        <p>
+            <strong>Current Status:</strong>
+            <span id="current-status">Loading...</span>
+        </p>
+
+    </div>
+
+
+    <form
+        id="status-form"
+        action="http://127.0.0.1:5000/update-status"
+        method="POST"
+    >
+
+        <input
+            type="hidden"
+            name="issue_id"
+            id="issue-id"
+        >
+
+        <label for="status">
+            Update Status
+        </label>
+
+        <select
+            name="status"
+            id="status"
+            required
+        >
+
+            <option value="Assigned">
+                Assigned
+            </option>
+
+            <option value="In Progress">
+                In Progress
+            </option>
+
+            <option value="Resolved">
+                Resolved
+            </option>
+
+        </select>
+
+
+        <label for="remarks">
+            Remarks
+        </label>
+
+        <textarea
+            name="remarks"
+            id="remarks"
+            rows="5"
+            placeholder="Enter remarks about the issue"
+        ></textarea>
+
+
+        <button type="submit">
+            Update Status
+        </button>
+
+    </form>
+
+
+    <p>
+        <a href="staff-dashboard.html">
+            Back to Staff Dashboard
+        </a>
+    </p>
+
+</div>
+
+
+<script>
+
+const params = new URLSearchParams(window.location.search);
+
+const issueId = params.get("issue");
+
+
+if (issueId) {
+
+    document.getElementById("issue-id").value = issueId;
+
+
+    fetch("http://127.0.0.1:5000/admin-issues")
+        .then(response => response.json())
+        .then(data => {
+
+            const issue = data.issues.find(
+                item => String(item.id) === String(issueId)
+            );
+
+
+            if (issue) {
+
+                document.getElementById("issue-title").textContent =
+                    issue.title;
+
+                document.getElementById("issue-location").textContent =
+                    issue.location;
+
+                document.getElementById("issue-category").textContent =
+                    issue.category;
+
+                document.getElementById("current-status").textContent =
+                    issue.status;
+
+
+                const statusDropdown =
+                    document.getElementById("status");
+
+                statusDropdown.value = issue.status;
+
+            } else {
+
+                document.getElementById("issue-title").textContent =
+                    "Issue not found";
+
+                document.getElementById("issue-location").textContent =
+                    "-";
+
+                document.getElementById("issue-category").textContent =
+                    "-";
+
+                document.getElementById("current-status").textContent =
+                    "-";
+            }
+
+        })
+        .catch(error => {
+
+            document.getElementById("issue-title").textContent =
+                "Failed to load issue";
+
+            console.error(error);
+
+        });
+
+} else {
+
+    document.getElementById("issue-title").textContent =
+        "No Issue Selected";
+
+    document.getElementById("issue-location").textContent =
+        "Please select an issue from Staff Dashboard.";
+
+    document.getElementById("issue-category").textContent =
+        "-";
+
+    document.getElementById("current-status").textContent =
+        "-";
+}
+
+</script>
+
+</body>
+</html>

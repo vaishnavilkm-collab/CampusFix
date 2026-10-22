@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusFix - Student Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <header>
+        <h1>CampusFix</h1>
+        <p>Student Dashboard</p>
+    </header>
+
+    <main>
+
+        <h2 id="welcome-message">Welcome! 👋</h2>
+
+        <a href="report-issue.html" class="report-button">
+            + Report New Issue
+        </a>
+
+        <h3><a href="my-issues.html">My Issues</a></h3>
+
+        <div id="dashboard-issues">
+            <p>Loading your issues...</p>
+        </div>
+
+    </main>
+
+</div>
+
+<script>
+
+fetch("/my-issues", {
+    credentials: "include"
+})
+.then(response => {
+
+    if (!response.ok) {
+        throw new Error("Unable to load issues");
+    }
+
+    return response.json();
+
+})
+.then(data => {
+
+    const container = document.getElementById("dashboard-issues");
+    const welcome = document.getElementById("welcome-message");
+
+    welcome.textContent =
+        `Welcome, ${data.student_name || "Student"}! 👋`;
+
+    const issues = data.issues || [];
+
+    if (issues.length === 0) {
+        container.innerHTML = "<p>No issues reported yet.</p>";
+        return;
+    }
+
+    container.innerHTML = "";
+
+    issues.forEach(issue => {
+
+        const card = document.createElement("div");
+        card.className = "issue-card";
+
+        card.innerHTML = `
+            <h4 class="issue-title"></h4>
+
+            <p><strong>Location:</strong> ${issue.location || "-"}</p>
+
+            <p><strong>Assigned staff:</strong>
+                <span class="staff-name"></span>
+            </p>
+
+            <p><strong>Staff email:</strong>
+                <span class="staff-email"></span>
+            </p>
+
+            <p><strong>Department:</strong>
+                <span class="staff-department"></span>
+            </p>
+
+            <p><strong>Status:</strong>
+                ${issue.status || "Pending"}
+            </p>
+        `;
+
+        card.querySelector(".issue-title").textContent =
+            issue.title || "-";
+
+        card.querySelector(".staff-name").textContent =
+            issue.staff_name || "Awaiting Staff Assignment";
+
+        card.querySelector(".staff-email").textContent =
+            issue.staff_email || "Not assigned yet";
+
+        card.querySelector(".staff-department").textContent =
+            issue.staff_department || "Not assigned yet";
+
+        container.appendChild(card);
+
+    });
+
+})
+.catch(error => {
+
+    console.error("Dashboard issue error:", error);
+
+    document.getElementById("dashboard-issues").innerHTML =
+        "<p>Unable to load issues. Please refresh the page.</p>";
+
+});
+
+</script>
+
+</body>
+</html>

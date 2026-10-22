@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusFix - Report Issue</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="report-container">
+
+    <h1>CampusFix</h1>
+    <h2>Report a Campus Issue</h2>
+
+    <form action="http://127.0.0.1:5000/report-issue" method="POST">
+
+        <label>Issue Title</label>
+        <input
+            type="text"
+            name="title"
+            placeholder="Enter issue title"
+            required
+        >
+
+        <label>Category</label>
+        <select name="category" required>
+            <option value="">Select category</option>
+            <option value="Wi-Fi">Wi-Fi</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Water">Water</option>
+            <option value="Cleanliness">Cleanliness</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <label>Location</label>
+        <input
+            type="text"
+            name="location"
+            placeholder="Enter location"
+            required
+        >
+
+        <label>Description</label>
+        <textarea
+            name="description"
+            placeholder="Describe the issue"
+            required
+        ></textarea>
+
+        <label>Priority</label>
+        <select name="priority" required>
+            <option value="">Select priority</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </select>
+
+        <button type="submit">Submit Issue</button>
+
+    </form>
+
+</div>
+
+</body>
+</html>

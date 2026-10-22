@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusFix - Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <header>
+        <h1>CampusFix</h1>
+        <p>Admin Dashboard</p>
+    </header>
+
+    <main>
+
+        <h2>Issue Overview</h2>
+
+        <div class="admin-stats">
+
+            <div class="admin-stat-card">
+                <h4>Total Issues</h4>
+                <p id="total-issues">0</p>
+            </div>
+
+            <div class="admin-stat-card">
+                <h4>Pending Issues</h4>
+                <p id="pending-issues">0</p>
+            </div>
+
+            <div class="admin-stat-card">
+                <h4>In Progress</h4>
+                <p id="in-progress-issues">0</p>
+            </div>
+
+            <div class="admin-stat-card">
+                <h4>Resolved Issues</h4>
+                <p id="resolved-issues">0</p>
+            </div>
+
+        </div>
+
+        <h3>Recent Issues</h3>
+
+        <div id="issues-container">
+            <p>Loading issues...</p>
+        </div>
+
+    </main>
+
+</div>
+
+<script>
+
+fetch("/admin-issues", {
+    credentials: "include"
+})
+.then(response => {
+
+    if (!response.ok) {
+        throw new Error("Failed to load issues.");
+    }
+
+    return response.json();
+
+})
+.then(data => {
+
+    const issues = data.issues || [];
+    const container = document.getElementById("issues-container");
+
+    container.innerHTML = "";
+
+    let pendingCount = 0;
+    let inProgressCount = 0;
+    let resolvedCount = 0;
+
+    issues.forEach(issue => {
+
+        if (issue.status === "Pending") pendingCount++;
+        if (issue.status === "In Progress") inProgressCount++;
+        if (issue.status === "Resolved") resolvedCount++;
+
+        const issueCard = document.createElement("div");
+        issueCard.className = "issue-card";
+
+        issueCard.innerHTML = `
+            <h4 class="issue-title"></h4>
+
+            <p><strong>Reported by:</strong>
+                <span class="reporter-name"></span>
+            </p>
+
+            <p><strong>Student email:</strong>
+                <span class="reporter-email"></span>
+            </p>
+
+            <p><strong>Assigned staff:</strong>
+                <span class="staff-name"></span>
+            </p>
+
+            <p><strong>Staff email:</strong>
+                <span class="staff-email"></span>
+            </p>
+
+            <p><strong>Department:</strong>
+                <span class="staff-department"></span>
+            </p>
+
+            <p><strong>Category:</strong> ${issue.category || "-"}</p>
+            <p><strong>Location:</strong> ${issue.location || "-"}</p>
+            <p><strong>Priority:</strong> ${issue.priority || "-"}</p>
+            <p><strong>Status:</strong> ${issue.status || "-"}</p>
+            <p><strong>Reported Date:</strong> ${issue.reported_date || "-"}</p>
+
+            <a
+                href="assign-staff.html?issue=${issue.id}"
+                class="report-button"
+            >
+                Assign Staff
+            </a>
+        `;
+
+        issueCard.querySelector(".issue-title").textContent =
+            issue.title || "Untitled issue";
+
+        issueCard.querySelector(".reporter-name").textContent =
+            issue.reporter_name || "Student details unavailable";
+
+        issueCard.querySelector(".reporter-email").textContent =
+            issue.reporter_email || "Email unavailable";
+
+        issueCard.querySelector(".staff-name").textContent =
+            issue.staff_name || "Not Assigned Yet";
+
+        issueCard.querySelector(".staff-email").textContent =
+            issue.staff_email || "Not Assigned Yet";
+
+        issueCard.querySelector(".staff-department").textContent =
+            issue.staff_department || "Not Assigned Yet";
+
+        container.appendChild(issueCard);
+
+    });
+
+    document.getElementById("total-issues").textContent = issues.length;
+    document.getElementById("pending-issues").textContent = pendingCount;
+    document.getElementById("in-progress-issues").textContent = inProgressCount;
+    document.getElementById("resolved-issues").textContent = resolvedCount;
+
+    if (issues.length === 0) {
+        container.innerHTML = "<p>No issues reported yet.</p>";
+    }
+
+})
+.catch(error => {
+
+    document.getElementById("issues-container").innerHTML =
+        "<p>Failed to load issues from the database.</p>";
+
+    console.error(error);
+
+});
+
+</script>
+
+</body>
+</html>

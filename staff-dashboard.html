@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusFix - Staff Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="dashboard-container">
+
+    <h1>CampusFix</h1>
+
+    <h2>Staff Dashboard</h2>
+
+    <p id="welcome-message">Loading...</p>
+
+    <h3>Assigned Issues</h3>
+
+    <div id="issues-container">
+        Loading assigned issues...
+    </div>
+
+</div>
+
+<script>
+
+fetch("/staff-issues", {
+    credentials: "include"
+})
+.then(response => {
+
+    if (!response.ok) {
+        throw new Error("Unable to load staff issues.");
+    }
+
+    return response.json();
+
+})
+.then(data => {
+
+    document.getElementById("welcome-message").innerText =
+        "Welcome, " + (data.staff_name || "Staff");
+
+    const container =
+        document.getElementById("issues-container");
+
+    if (!Array.isArray(data.issues) || data.issues.length === 0) {
+
+        container.innerHTML =
+            "<p>No issues are currently assigned to you.</p>";
+
+        return;
+    }
+
+    container.innerHTML = "";
+
+    data.issues.forEach(issue => {
+
+        const issueDiv = document.createElement("div");
+
+        issueDiv.innerHTML = `
+            <hr>
+
+            <h3></h3>
+
+            <p><strong>Reported by:</strong> <span class="reporter-name"></span></p>
+
+            <p><strong>Student email:</strong> <span class="reporter-email"></span></p>
+
+            <p>
+                <strong>Category:</strong>
+                ${issue.category || "-"}
+            </p>
+
+            <p>
+                <strong>Location:</strong>
+                ${issue.location || "-"}
+            </p>
+
+            <p>
+                <strong>Description:</strong>
+                ${issue.description || "No description"}
+            </p>
+
+            <p>
+                <strong>Priority:</strong>
+                ${issue.priority || "-"}
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                ${issue.status || "-"}
+            </p>
+
+            <a href="update-status.html?issue=${issue.id}">
+                Update Status
+            </a>
+
+            <br><br>
+        `;
+
+        issueDiv.querySelector("h3").textContent =
+            issue.title || "Untitled issue";
+
+        issueDiv.querySelector(".reporter-name").textContent =
+            issue.reporter_name || "Student details unavailable";
+
+        issueDiv.querySelector(".reporter-email").textContent =
+            issue.reporter_email || "Email unavailable";
+
+        container.appendChild(issueDiv);
+
+    });
+
+})
+.catch(error => {
+
+    document.getElementById("issues-container").innerHTML =
+        "<p>" + error.message + "</p>";
+
+    console.error(error);
+
+});
+
+</script>
+
+</body>
+</html>

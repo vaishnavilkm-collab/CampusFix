@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusFix - Assign Staff</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="report-container">
+
+    <h1>CampusFix</h1>
+    <h2>Assign Staff</h2>
+
+    <div id="issue-information">
+
+        <p>
+            <strong>Issue:</strong>
+            <span id="issue-title">Loading...</span>
+        </p>
+
+        <p>
+            <strong>Location:</strong>
+            <span id="issue-location">Loading...</span>
+        </p>
+
+        <p>
+            <strong>Category:</strong>
+            <span id="issue-category">Loading...</span>
+        </p>
+
+    </div>
+
+    <form
+        id="assign-form"
+        action="http://127.0.0.1:5000/assign-staff"
+        method="POST"
+    >
+
+        <input
+            type="hidden"
+            name="issue_id"
+            id="issue-id"
+        >
+
+        <label>Select Staff</label>
+
+        <select name="staff_id" id="staff-select" required>
+            <option value="">Loading staff members...</option>
+        </select>
+
+        <label>Priority</label>
+
+        <select name="priority" required>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="High">High</option>
+        </select>
+
+        <button type="submit">Assign Issue</button>
+
+    </form>
+
+    <p>
+        <a href="admin-dashboard.html">
+            Back to Admin Dashboard
+        </a>
+    </p>
+
+</div>
+
+<script>
+
+// ------------------------------------------
+// LOAD SELECTED ISSUE DETAILS
+// ------------------------------------------
+
+const params = new URLSearchParams(window.location.search);
+const issueId = params.get("issue");
+
+if (issueId) {
+
+    document.getElementById("issue-id").value = issueId;
+
+    fetch("/admin-issues")
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Unable to load issues");
+            }
+            return response.json();
+        })
+        .then(data => {
+
+            const issue = (data.issues || []).find(
+                item => String(item.id) === String(issueId)
+            );
+
+            if (issue) {
+
+                document.getElementById("issue-title").textContent =
+                    issue.title || "-";
+
+                document.getElementById("issue-location").textContent =
+                    issue.location || "-";
+
+                document.getElementById("issue-category").textContent =
+                    issue.category || "-";
+
+            } else {
+
+                document.getElementById("issue-title").textContent =
+                    "Issue not found";
+
+                document.getElementById("issue-location").textContent = "-";
+                document.getElementById("issue-category").textContent = "-";
+            }
+
+        })
+        .catch(error => {
+
+            document.getElementById("issue-title").textContent =
+                "Failed to load issue";
+
+            document.getElementById("issue-location").textContent = "-";
+            document.getElementById("issue-category").textContent = "-";
+
+            console.error("Issue loading error:", error);
+
+        });
+
+} else {
+
+    document.getElementById("issue-title").textContent =
+        "No Issue Selected";
+
+    document.getElementById("issue-location").textContent =
+        "Please select an issue from Admin Dashboard.";
+
+    document.getElementById("issue-category").textContent = "-";
+}
+
+
+// ------------------------------------------
+// LOAD ALL REGISTERED STAFF DYNAMICALLY
+// ------------------------------------------
+
+fetch("/staff-users")
+    .then(response => {
+        if (!response.ok) {
+            throw new Error("Unable to load staff members");
+        }
+        return response.json();
+    })
+    .then(data => {
+
+        const staffSelect = document.getElementById("staff-select");
+        const staffMembers = data.staff || [];
+
+        staffSelect.innerHTML =
+            '<option value="">Select staff member</option>';
+
+        staffMembers.forEach(member => {
+
+            const option = document.createElement("option");
+            option.value = member.id;
+
+            const department = member.department || "General";
+
+            option.textContent =
+                `${member.name} - ${department}`;
+
+            staffSelect.appendChild(option);
+
+        });
+
+        if (staffMembers.length === 0) {
+
+            staffSelect.innerHTML =
+                '<option value="">No staff members registered</option>';
+
+        }
+
+    })
+    .catch(error => {
+
+        console.error("Staff loading error:", error);
+
+        document.getElementById("staff-select").innerHTML =
+            '<option value="">Unable to load staff</option>';
+
+    });
+
+</script>
+
+</body>
+</html>

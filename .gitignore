@@ -1,0 +1,22 @@
+
+# Python virtual environment
+backend/venv/
+
+# Database files containing project data
+backend/*.db
+backend/*.db-*
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.db
+
+campusFIX_Source.zip
