@@ -38,11 +38,7 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("PRAGMA table_info(users)")
-    columns = [column[1] for column in cursor.fetchall()]
-
-    if "department" not in columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN department TEXT")
+    
 
     # USERS TABLE
     cursor.execute("""
@@ -55,6 +51,11 @@ def init_db():
             department TEXT
         )
     """)
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [column[1] for column in cursor.fetchall()]
+    
+    if "department" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN department TEXT")
 
     # ISSUES TABLE
     cursor.execute("""
@@ -145,39 +146,7 @@ def home():
     )
 
 
-# --------------------------------------------------
-# TEST ROUTE
-# --------------------------------------------------
 
-@app.route("/add-test-user")
-def add_test_user():
-
-    conn = get_db()
-
-    try:
-
-        conn.execute("""
-            INSERT INTO users
-            (name, email, password, role)
-            VALUES (?, ?, ?, ?)
-        """, (
-            "Test User",
-            "test@campusfix.com",
-            "1234",
-            "Student"
-        ))
-
-        conn.commit()
-
-        message = "Test user added successfully!"
-
-    except sqlite3.IntegrityError:
-
-        message = "Test user already exists."
-
-    conn.close()
-
-    return message
 
 
 # --------------------------------------------------
@@ -276,6 +245,7 @@ def login():
     return "Login successful!"
 
 
+
 # --------------------------------------------------
 # REPORT ISSUE
 # --------------------------------------------------
@@ -283,57 +253,81 @@ def login():
 @app.route("/report-issue", methods=["POST"])
 def report_issue():
 
+    if "user_id" not in session:
+        return {"error": "Please login first."}, 401
+
+    if session.get("role") != "Student":
+        return {"error": "Access denied."}, 403
+
     title = request.form.get("title")
     category = request.form.get("category")
     location = request.form.get("location")
     description = request.form.get("description")
     priority = request.form.get("priority")
 
+    if not title or not category or not location:
+        return {
+            "error": "Title, category, and location are required."
+        }, 400
+
     reported_date = __import__("datetime").datetime.now().strftime(
         "%Y-%m-%d %H:%M:%S"
     )
 
-    reported_by = session.get("user_id")
+    reported_by = session["user_id"]
 
     conn = get_db()
 
-    conn.execute("""
-        INSERT INTO issues
-        (
+    try:
+        conn.execute("""
+            INSERT INTO issues
+            (
+                title,
+                category,
+                location,
+                description,
+                priority,
+                status,
+                reported_date,
+                reported_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
             title,
             category,
             location,
             description,
             priority,
-            status,
+            "Pending",
             reported_date,
             reported_by
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        title,
-        category,
-        location,
-        description,
-        priority,
-        "Pending",
-        reported_date,
-        reported_by
-    ))
+        ))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
     return "Issue reported successfully!"
+
 
 
 # --------------------------------------------------
 # ADMIN - VIEW ALL ISSUES
 # --------------------------------------------------
 
-
 @app.route("/admin-issues")
 def admin_issues():
+
+    if "user_id" not in session:
+        return {"error": "Please login first."}, 401
+
+    if session.get("role") != "Admin":
+        return {"error": "Access denied."}, 403
 
     conn = get_db()
 
@@ -370,6 +364,8 @@ def admin_issues():
 
 
 
+
+
 # --------------------------------------------------
 # ASSIGN STAFF
 # --------------------------------------------------
@@ -377,8 +373,17 @@ def admin_issues():
 @app.route("/assign-staff", methods=["POST"])
 def assign_staff():
 
+    if "user_id" not in session:
+        return {"error": "Please login first."}, 401
+
+    if session.get("role") != "Admin":
+        return {"error": "Access denied."}, 403
+
     issue_id = request.form.get("issue_id")
     staff_id = request.form.get("staff_id")
+
+    if not issue_id or not staff_id:
+        return {"error": "Issue ID and staff ID are required."}, 400
 
     assigned_date = __import__("datetime").datetime.now().strftime(
         "%Y-%m-%d %H:%M:%S"
@@ -386,56 +391,64 @@ def assign_staff():
 
     conn = get_db()
 
-    # Check whether assignment already exists
-    existing_assignment = conn.execute("""
-        SELECT id
-        FROM assignments
-        WHERE issue_id = ?
-    """, (
-        issue_id,
-    )).fetchone()
+    try:
+        # Verify that the issue exists.
+        issue = conn.execute("""
+            SELECT id
+            FROM issues
+            WHERE id = ?
+        """, (issue_id,)).fetchone()
 
-    if existing_assignment:
+        if issue is None:
+            return {"error": "Issue not found."}, 404
 
-        conn.execute("""
-            UPDATE assignments
-            SET staff_id = ?,
-                assigned_date = ?
+        # Verify that the selected user is a Staff member.
+        staff = conn.execute("""
+            SELECT id
+            FROM users
+            WHERE id = ? AND role = 'Staff'
+        """, (staff_id,)).fetchone()
+
+        if staff is None:
+            return {"error": "Selected staff member not found."}, 400
+
+        # Check whether an assignment already exists.
+        existing_assignment = conn.execute("""
+            SELECT id
+            FROM assignments
             WHERE issue_id = ?
-        """, (
-            staff_id,
-            assigned_date,
-            issue_id
-        ))
+        """, (issue_id,)).fetchone()
 
-    else:
+        if existing_assignment:
+            conn.execute("""
+                UPDATE assignments
+                SET staff_id = ?,
+                    assigned_date = ?
+                WHERE issue_id = ?
+            """, (staff_id, assigned_date, issue_id))
 
+        else:
+            conn.execute("""
+                INSERT INTO assignments
+                (issue_id, staff_id, assigned_date)
+                VALUES (?, ?, ?)
+            """, (issue_id, staff_id, assigned_date))
+
+        # Change issue status to Assigned.
         conn.execute("""
-            INSERT INTO assignments
-            (
-                issue_id,
-                staff_id,
-                assigned_date
-            )
-            VALUES (?, ?, ?)
-        """, (
-            issue_id,
-            staff_id,
-            assigned_date
-        ))
+            UPDATE issues
+            SET status = ?
+            WHERE id = ?
+        """, ("Assigned", issue_id))
 
-    # Change issue status to Assigned
-    conn.execute("""
-        UPDATE issues
-        SET status = ?
-        WHERE id = ?
-    """, (
-        "Assigned",
-        issue_id
-    ))
+        conn.commit()
 
-    conn.commit()
-    conn.close()
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
     return "Staff assigned successfully!"
 
@@ -518,6 +531,7 @@ def staff_users():
     }
 
 
+
 # --------------------------------------------------
 # UPDATE ISSUE STATUS
 # --------------------------------------------------
@@ -525,9 +539,20 @@ def staff_users():
 @app.route("/update-status", methods=["POST"])
 def update_status():
 
+    if "user_id" not in session:
+        return {"error": "Please login first."}, 401
+
+    if session.get("role") != "Staff":
+        return {"error": "Access denied."}, 403
+
     issue_id = request.form.get("issue_id")
     status = request.form.get("status")
     remarks = request.form.get("remarks")
+
+    allowed_statuses = {"Pending", "Assigned", "In Progress", "Resolved"}
+
+    if not issue_id or status not in allowed_statuses:
+        return {"error": "Invalid issue ID or status."}, 400
 
     updated_date = __import__("datetime").datetime.now().strftime(
         "%Y-%m-%d %H:%M:%S"
@@ -535,37 +560,42 @@ def update_status():
 
     conn = get_db()
 
-    # Update current status
-    conn.execute("""
-        UPDATE issues
-        SET status = ?
-        WHERE id = ?
-    """, (
-        status,
-        issue_id
-    ))
+    try:
+        # Verify that this issue is assigned to the logged-in staff member.
+        assignment = conn.execute("""
+            SELECT issue_id
+            FROM assignments
+            WHERE issue_id = ? AND staff_id = ?
+        """, (issue_id, session["user_id"])).fetchone()
 
-    # Save status history
-    conn.execute("""
-        INSERT INTO status_updates
-        (
-            issue_id,
-            status,
-            remarks,
-            updated_date
-        )
-        VALUES (?, ?, ?, ?)
-    """, (
-        issue_id,
-        status,
-        remarks,
-        updated_date
-    ))
+        if assignment is None:
+            return {"error": "This issue is not assigned to you."}, 403
 
-    conn.commit()
-    conn.close()
+        # Update status only after checking ownership.
+        conn.execute("""
+            UPDATE issues
+            SET status = ?
+            WHERE id = ?
+        """, (status, issue_id))
+
+        # Save status history.
+        conn.execute("""
+            INSERT INTO status_updates
+            (issue_id, status, remarks, updated_date)
+            VALUES (?, ?, ?, ?)
+        """, (issue_id, status, remarks, updated_date))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
     return "Issue status updated successfully!"
+
 
 
 # --------------------------------------------------
@@ -696,4 +726,4 @@ if __name__ == "__main__":
 
     init_db()
 
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
